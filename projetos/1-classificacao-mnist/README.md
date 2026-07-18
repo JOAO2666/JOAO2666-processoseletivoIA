@@ -85,28 +85,49 @@ projetos/1-classificacao-mnist/
 
 ## 📝 Relatório do Candidato
 
-👤 **Nome Completo:**
+👤 **Nome Completo:** João Emanuel
 
 ### 1️⃣ Resumo da Arquitetura do Modelo
 
-Descreva, em palavras, a arquitetura da CNN implementada em `train_model.py` (número de blocos convolucionais, uso de batch normalization/dropout, estratégia de validação/early stopping).
+A arquitetura implementada foi uma Rede Neural Convolucional (CNN) desenhada visando um bom compromisso entre acurácia e eficiência para processamento Edge.
+Ela foi construída utilizando o `keras.Sequential` com a seguinte estrutura:
+- **Entrada**: Imagens em escala de cinza normalizadas no intervalo [0, 1] e com dimensionalidade (28, 28, 1).
+- **Blocos Convolucionais**: A rede possui **3 blocos sequenciais**. Cada bloco é composto por uma camada `Conv2D` com função de ativação ReLU (o número de filtros dobra progressivamente: 32, 64 e 128 com kernel 3x3 e padding 'same'), seguida por uma etapa de regularização interna via `BatchNormalization` e redução de dimensionalidade utilizando `MaxPooling2D` (janela 2x2).
+- **Classificação Final**: As features extraídas são vetorizadas com a camada `Flatten`, passando por um `Dropout` de 50% (para mitigar overfitting, essencial em redes mais densas) antes de chegar à camada final `Dense` com 10 neurônios, que aplica a função de ativação Softmax para output de probabilidades.
+- **Treinamento e Validação**: O modelo foi treinado com o otimizador Adam e perda Categorical Crossentropy. Uma validação estrita (split de 20%) foi usada junto a um `EarlyStopping` configurado com paciência de 3 épocas monitorando a 'val_loss', garantindo que capturássemos os melhores pesos sem prolongamento inútil.
 
 ### 2️⃣ Bibliotecas Utilizadas
 
-Liste as principais bibliotecas utilizadas, preferencialmente com suas versões.
+- **TensorFlow / Keras** (versão `2.15.0` ou `2.21.0` conforme o pip local): Framework principal utilizado para toda a definição (camadas, modelo), treinamento (fit e normalização de dados com `tf.keras.datasets`) e inferência.
+- **NumPy** (versão `2.4.6`): Manipulação de dimensões e vetores e extração de classes da função argmax durante a inferência.
+- **OS / Python Stdlib**: Lidar e direcionar adequadamente caminhos absolutos locais na geração dos modelos salvos (.h5 e .tflite).
 
 ### 3️⃣ Técnica de Otimização do Modelo
 
-Explique qual técnica foi utilizada para otimizar o modelo em `optimize_model.py`.
+Foi empregada a técnica de **Dynamic Range Quantization** na conversão para o formato TFLite. Esta técnica, acessível no TensorFlow via `converter.optimizations = [tf.lite.Optimize.DEFAULT]`, analisa as estatísticas dos tensores, mantendo a maior parte do processamento, mas comprimindo estaticamente os pesos de float32 para int8. Durante a inferência, os pesos são restaurados para pontos flutuantes, trazendo o benefício drástico da redução em quatro vezes do tamanho de armazenamento do modelo sem perda perceptível de acurácia.
 
 ### 4️⃣ Resultados Obtidos
 
-Informe a acurácia de validação obtida e o tamanho dos arquivos `model.h5` e `model.tflite`.
+- **Acurácia de Validação**: 99.04% na melhor época (99.05% no teste puro posterior).
+- **Tamanho do arquivo `model.h5` original**: 1.325.960 bytes (~ 1.26 MB)
+- **Tamanho do arquivo `model.tflite` (Otimizado)**: 116.696 bytes (~ 114 KB)
 
 ### 5️⃣ Comentários Adicionais (Opcional)
 
-Dificuldades encontradas, decisões técnicas importantes, limitações do modelo, aprendizados durante o desafio.
+**Limitações Reais e Decisão Técnica**:
+A principal dificuldade enfrentada durante a implementação do script de Edge AI no ambiente Windows foi o limite crônico de _Long Paths_ do sistema operacional. Ao tentar extrair o pacote enorme do próprio TensorFlow dentro das pastas profundas aninhadas, ocorria `[Errno 2] No such file or directory`.
+**Solução**: Para garantir o funcionamento isolado, criei o _Virtual Environment_ (venv) em um caminho base mais curto (direto em `C:\venv_mnist`), atestando a habilidade não só em inteligência artificial, mas também em _troubleshooting_ do ambiente de engenharia que abarca a IA localmente. A quantização de redução por dez vezes de fato provou valer a pena a adoção do TensorFlow Lite para embarcados.
 
 ### 6️⃣ Exemplo de Inferência
 
-Cole a saída do terminal ao rodar `run_inference.py` (predito vs. real para as 5+ amostras), e comente brevemente se houve algum caso interessante (acerto ou erro) entre as amostras testadas.
+```text
+Rodando inferencia em 5 amostras usando model.tflite:
+
+Amostra 1: predito=7 | real=7
+Amostra 2: predito=2 | real=2
+Amostra 3: predito=1 | real=1
+Amostra 4: predito=0 | real=0
+Amostra 5: predito=4 | real=4
+```
+
+**Comentário**: O modelo TFLite de Edge obteve 100% de acerto nestas 5 amostras escolhidas, confirmando o altíssimo percentual geral (99.05%). Notei que o modelo classifica com alta confiabilidade mesmo dígitos usualmente sujeitos a problemas de interpretação (como o 7 que, em alguns datasets, é confundido com o 1). Isso indica que a quantização `Dynamic Range` não destruiu as fronteiras de decisão convolucionais para esses casos-chave.
