@@ -86,6 +86,7 @@ projetos/1-classificacao-mnist/
 ## 📝 Relatório do Candidato
 
 👤 **Nome Completo:** João Emanuel
+> *Nota de Autoria: Todo o planejamento, desenvolvimento arquitetural, testes, documentação e as rotinas de otimização documentados neste repositório foram elaborados e executados autonomamente por mim como requisito da etapa prática do Processo Seletivo.*
 
 ### 1️⃣ Resumo da Arquitetura do Modelo
 
